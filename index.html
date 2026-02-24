@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<title>Dashboard PLN - UID Kalselteng</title>
+
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+<style>
+body{ 
+  margin:0;
+  font-family:Arial, sans-serif;
+  background:#f2f5f9;
+  overflow:hidden;
+}
+.sidebar{
+  width:260px;
+  height:100vh;
+  position:fixed;
+  left:0;
+  top:0;
+  background:#0b4d5d;
+  color:#fff;
+  padding:20px;
+  overflow-y:auto;
+}
+.sidebar .section-title{
+  font-weight:bold;
+  margin-top:12px;
+  margin-bottom:6px;
+  cursor:pointer;
+}
+.sidebar .section-title:hover{
+  background:#0f6b80;
+  padding:6px;
+  border-radius:6px;
+}
+.header{
+  margin-left:260px;
+  background:#0b4d5d;
+  color:#fff;
+  padding:15px 25px;
+  height:60px;
+  display:flex;
+  align-items:center;
+}
+.content{
+  margin-left:260px;
+  padding:25px;
+  height:calc(100vh - 60px);
+  overflow:auto;
+}
+.placeholder-box{
+  background:#fff;
+  border:2px dashed #bbb;
+  border-radius:10px;
+  padding:40px;
+  text-align:center;
+  color:#777;
+  margin-top:30px;
+}
+.tree{
+  width:max-content;
+  min-width:100%;
+  padding-bottom:100px;
+}
+.tree ul{
+  padding-top:20px;
+  display:flex;
+  justify-content:center;
+  position:relative;
+}
+.tree li{
+  list-style:none;
+  padding:20px 10px 0 10px;
+  text-align:center;
+  position:relative;
+}
+.tree li::before,
+.tree li::after{
+  content:'';
+  position:absolute;
+  top:0;
+  width:50%;
+  height:20px;
+  border-top:2px solid #555;
+}
+.tree li::before{ right:50%; }
+.tree li::after{
+  left:50%;
+  border-left:2px solid #555;
+}
+.tree li:only-child::before,
+.tree li:only-child::after{
+  display:none;
+}
+.tree ul ul::before{
+  content:'';
+  position:absolute;
+  top:0;
+  left:50%;
+  height:20px;
+  border-left:2px solid #555;
+}
+.tree li:first-child::before{ display:none; }
+.tree li:last-child::after{ border-top:none; }
+.node{
+  background:#fff;
+  border:2px solid #000;
+  padding:10px 14px;
+  border-radius:10px;
+  font-size:13px;
+  font-weight:600;
+  line-height:1.3;
+  display:inline-block;
+  max-width:260px;
+  box-shadow:0 4px 10px rgba(0,0,0,0.08);
+}
+/* ===== ZOOM SYSTEM ===== */
+.zoom-wrapper{
+  width:100%;
+  height:100%;
+  overflow:auto;
+  position:relative;
+}
+
+.zoom-canvas{
+  transform-origin:0 0;
+  will-change: transform;
+  display:inline-block;
+}
+.level-1{
+  font-size:14px;
+  font-weight:bold;
+}
+.node.highlight{
+  background:#fff3cd;
+  border-color:#f0ad4e;
+}
+#ulpMenu a{
+  display:block;
+  color:#fff;
+  font-size:13px;
+  padding:6px 8px;
+  text-decoration:none;
+  border-radius:6px;
+}
+#ulpMenu a:hover{
+  background:#0f6b80;
+}
+/* ===== WARNA PER ORANG (MASA JABATAN) ===== */
+.personnel-info{
+  margin-top:6px;
+  padding:6px 8px;
+  border-radius:6px;
+  font-size:12px;
+  font-weight:normal;
+}
+
+.personnel-info.mj-0,
+.personnel-info.mj-1,
+.personnel-info.mj-2 {
+  background: #ffffff;
+  border-left: 4px solid #000;
+}
+
+.personnel-info.mj-3 {
+  background: #fffc60;
+  border-left: 4px solid #d1d401;
+}
+
+.personnel-info.mj-4,
+.personnel-info.mj-5 {
+  background: #f5bdc2;
+  border-left: 4px solid #842029;
+}
+
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+</head>
+
+<body>
+
+<script>
+let dataPegawai = [];
+
+/* ================= LOAD CSV ================= */
+function loadCSV(){
+  Papa.parse("DATA JABATAN ULP.csv", {
+    download: true,
+    header: true,
+    skipEmptyLines: true,
+    complete: function(results){
+      dataPegawai = results.data;
+      console.log("CSV Loaded:", dataPegawai);
+    }
+  });
+}
+loadCSV();
+
+</script>
+
+<div class="sidebar">
+  <div class="text-center">
+    <img src="https://upload.wikimedia.org/wikipedia/commons/9/97/Logo_PLN.png" style="width:80px;margin-bottom:10px">
+    <h5>PT PLN (Persero)</h5>
+    <small>UID Kalselteng</small>
+  </div>
+
+  <hr>
+
+  <!-- BAGIAN A -->
+  <div class="section-title" onclick="showBaganOrganisasi()">
+    A. Bagan Organisasi
+  </div>
+
+  <hr>
+
+  <!-- BAGIAN B -->
+  <div class="section-title" onclick="openStruktur()">
+  B. Struktur Jabatan
+</div>
+
+  <!-- SUBMENU ULP -->
+<div id="ulpMenu" style="display:none; margin-left:15px;">
+
+  <a onclick="showStrukturJabatan('ULP AHMAD YANI')">ULP AHMAD YANI</a>
+  <a onclick="showStrukturJabatan('ULP BANJARBARU')">ULP BANJARBARU</a>
+  <a onclick="showStrukturJabatan('ULP GAMBUT')">ULP GAMBUT</a>
+  <a onclick="showStrukturJabatan('ULP LAMBUNG MANGKURAT')">ULP LAMBUNG MANGKURAT</a>
+  <a onclick="showStrukturJabatan('ULP MARABAHAN')">ULP MARABAHAN</a>
+  <a onclick="showStrukturJabatan('ULP MARTAPURA')">ULP MARTAPURA</a>
+  <a onclick="showStrukturJabatan('ULP PELAIHARI')">ULP PELAIHARI</a>
+  <a onclick="showStrukturJabatan('ULP AMUNTAI')">ULP AMUNTAI</a>
+  <a onclick="showStrukturJabatan('ULP BARABAI KT')">ULP BARABAI KT</a>
+  <a onclick="showStrukturJabatan('ULP BINUANG')">ULP BINUANG</a>
+  <a onclick="showStrukturJabatan('ULP DAHA')">ULP DAHA</a>
+  <a onclick="showStrukturJabatan('ULP KANDANGAN')">ULP KANDANGAN</a>
+  <a onclick="showStrukturJabatan('ULP PARINGIN')">ULP PARINGIN</a>
+  <a onclick="showStrukturJabatan('ULP RANTAU')">ULP RANTAU</a>
+  <a onclick="showStrukturJabatan('ULP TANJUNG')">ULP TANJUNG</a>
+  <a onclick="showStrukturJabatan('ULP BUNTOK')">ULP BUNTOK</a>
+  <a onclick="showStrukturJabatan('ULP KAPUAS KOTA')">ULP KAPUAS KOTA</a>
+  <a onclick="showStrukturJabatan('ULP MUARA TEWEH')">ULP MUARA TEWEH</a>
+  <a onclick="showStrukturJabatan('ULP PLNG PISAU')">ULP PLNG PISAU</a>
+  <a onclick="showStrukturJabatan('ULP PURUK CAHU')">ULP PURUK CAHU</a>
+  <a onclick="showStrukturJabatan('ULP TAMIANG LYG')">ULP TAMIANG LYG</a>
+  <a onclick="showStrukturJabatan('ULP KASONGAN')">ULP KASONGAN</a>
+  <a onclick="showStrukturJabatan('ULP KUALA KURUN')">ULP KUALA KURUN</a>
+  <a onclick="showStrukturJabatan('ULP PKY BARAT')">ULP PKY BARAT</a>
+  <a onclick="showStrukturJabatan('ULP PKY TIMUR')">ULP PKY TIMUR</a>
+  <a onclick="showStrukturJabatan('ULP KL PEMBUANG')">ULP KL PEMBUANG</a>
+  <a onclick="showStrukturJabatan('ULP NANGA BULIK')">ULP NANGA BULIK</a>
+  <a onclick="showStrukturJabatan('ULP PANGKALAN BUN')">ULP PANGKALAN BUN</a>
+  <a onclick="showStrukturJabatan('ULP SAMPIT')">ULP SAMPIT</a>
+  <a onclick="showStrukturJabatan('ULP SUKAMARA')">ULP SUKAMARA</a>
+  <a onclick="showStrukturJabatan('ULP BATULICIN')">ULP BATULICIN</a>
+  <a onclick="showStrukturJabatan('ULP KOTABARU KT')">ULP KOTABARU KT</a>
+  <a onclick="showStrukturJabatan('ULP SATUI')">ULP SATUI</a>
+
+</div>
+</div>
+
+<!-- HEADER -->
+<div class="header">
+
+  <div id="headerTitle">
+    Dashboard Internal PLN
+  </div>
+
+  <div style="margin-left:auto; display:flex; align-items:center; gap:10px;">
+    <input type="text"
+           id="searchJabatan"
+           class="form-control form-control-sm"
+           style="width:320px;"
+           placeholder="Cari jabatan / nama..."
+           onkeyup="searchStruktur()">
+  </div>
+
+</div>
+
+<!-- CONTENT -->
+<div class="content" id="contentArea">
+  <h4>Selamat Datang</h4>
+  <div class="placeholder-box">
+    Silakan pilih menu di sidebar.
+  </div>
+</div>
+
+<script>
+
+function showBaganOrganisasi(){
+  document.getElementById('headerTitle').innerText = 'A. Bagan Organisasi';
+
+  document.getElementById('contentArea').innerHTML = `
+    <h4>Bagan Organisasi</h4>
+
+    <div class="zoom-wrapper">
+  <div class="zoom-canvas">
+    <div class="tree">
+      <ul>
+        <li>
+          <div class="node level-1">
+            UNIT LAYANAN PELANGGAN
+          </div>
+
+          <ul>
+            <li><div class="node">SEKSI TEKNIK LAYANAN PELANGGAN</div></li>
+            <li><div class="node">SEKSI TRANSAKSI ENERGI LAYANAN PELANGGAN</div></li>
+            <li><div class="node">SEKSI PELAYANAN PELANGGAN</div></li>
+            <li><div class="node">SEKSI SALES RETAIL *)</div></li>
+            <li><div class="node">SEKSI PENGELOLAAN UNIT LAYANAN PELANGGAN TERSEBAR *)</div></li>
+            <li>
+              <div class="node">
+                SEKSI KESELAMATAN, KESEHATAN KERJA, LINGKUNGAN, DAN KEAMANAN LAYANAN PELANGGAN
+              </div>
+            </li>
+          </ul>
+        </li>
+      </ul>
+    </div>
+  `;
+}
+
+/* ================= B. STRUKTUR JABATAN ================= */
+function showStrukturJabatan(ulp){
+
+  document.getElementById('headerTitle').innerText =
+    'B. Struktur Jabatan - ' + ulp;
+
+  // tampilkan dulu tree asli kamu
+  document.getElementById('contentArea').innerHTML = `
+    <h4>Struktur Jabatan - ${ulp}</h4>
+
+    <div class="zoom-wrapper">
+  <div class="zoom-canvas">
+    <div class="tree">
+      <ul>
+        <li>
+
+          <div class="node level-1">
+            MANAGER UNIT LAYANAN PELANGGAN
+          </div>
+
+          <ul>
+            <li><div class="node">SENIOR OFFICER KINERJA DAN ADMINISTRASI LAYANAN PELANGGAN</div></li>
+            <li><div class="node">OFFICER KINERJA DAN ADMINISTRASI LAYANAN PELANGGAN</div></li>
+            <li><div class="node">SENIOR OFFICER LOGISTIK LAYANAN PELANGGAN</div></li>
+            <li><div class="node">OFFICER LOGISTIK LAYANAN PELANGGAN</div></li>
+          </ul>
+
+          <ul>
+
+            <li>
+              <div class="node">TEAM LEADER TEKNIK LAYANAN PELANGGAN</div>
+              <ul>
+                <li><div class="node">TECHNICIAN TEKNIK LAYANAN PELANGGAN</div></li>
+                <li><div class="node">JUNIOR TECHNICIAN TEKNIK LAYANAN PELANGGAN</div></li>
+              </ul>
+            </li>
+
+            <li>
+              <div class="node">TEAM LEADER TRANSAKSI ENERGI LAYANAN PELANGGAN</div>
+              <ul>
+                <li><div class="node">TECHNICIAN TRANSAKSI ENERGI LAYANAN PELANGGAN</div></li>
+                <li><div class="node">JUNIOR TECHNICIAN TRANSAKSI ENERGI LAYANAN PELANGGAN</div></li>
+              </ul>
+            </li>
+
+            <li>
+              <div class="node">TEAM LEADER PELAYANAN PELANGGAN</div>
+              <ul>
+                <li><div class="node">OFFICER PELAYANAN PELANGGAN</div></li>
+                <li><div class="node">JUNIOR OFFICER PELAYANAN PELANGGAN</div></li>
+              </ul>
+            </li>
+
+            <li>
+              <div class="node">TEAM LEADER SALES RETAIL *)</div>
+              <ul>
+                <li><div class="node">OFFICER SALES RETAIL *)</div></li>
+                <li><div class="node">JUNIOR OFFICER SALES RETAIL *)</div></li>
+              </ul>
+            </li>
+
+            <li>
+              <div class="node">TEAM LEADER PENGELOLAAN UNIT LAYANAN PELANGGAN TERSEBAR *)</div>
+              <ul>
+                <li><div class="node">TECHNICIAN PENGELOLAAN UNIT LAYANAN PELANGGAN TERSEBAR *)</div></li>
+                <li><div class="node">JUNIOR TECHNICIAN PENGELOLAAN UNIT LAYANAN PELANGGAN TERSEBAR *)</div></li>
+              </ul>
+            </li>
+
+            <li>
+              <div class="node">
+                TEAM LEADER KESELAMATAN, KESEHATAN KERJA, LINGKUNGAN, DAN KEAMANAN LAYANAN PELANGGAN
+              </div>
+              <ul>
+                <li>
+                  <div class="node">
+                    OFFICER KESELAMATAN, KESEHATAN KERJA, LINGKUNGAN, DAN KEAMANAN LAYANAN PELANGGAN
+                  </div>
+                </li>
+                <li>
+                  <div class="node">
+                    JUNIOR OFFICER KESELAMATAN, KESEHATAN KERJA, LINGKUNGAN, DAN KEAMANAN LAYANAN PELANGGAN
+                  </div>
+                </li>
+              </ul>
+            </li>
+
+          </ul>
+
+        </li>
+      </ul>
+    </div>
+  `;
+  // ===== SUNTIK DATA CSV =====
+  const nodes = document.querySelectorAll('.node');
+
+  nodes.forEach(node => {
+
+    const jabatan = node.innerText.trim();
+
+    const match = dataPegawai.find(d =>
+      d["Nama Panjang Posisi"]?.trim() === jabatan &&
+      d["Personnel Subarea"]?.trim() === ulp
+    );
+
+    if(match){
+
+  let masa = parseInt(match["Masa Jabatan (Tahun)"]) || 0;
+
+  node.innerHTML += `
+    <div class="personnel-info mj-${masa}">
+      PN: ${match["Personnel Number"] || "-"} <br>
+      Masa Jabatan: ${masa} Tahun
+    </div>
+  `;
+}
+function showStrukturJabatanSemua(){
+
+  // ubah judul
+  document.getElementById('headerTitle').innerText =
+    'B. Struktur Jabatan - Seluruh ULP';
+
+  // panggil dulu struktur tree TANPA filter ULP
+  showStrukturJabatan("");
+
+  // ambil semua node jabatan
+  const nodes = document.querySelectorAll('.node');
+
+  nodes.forEach(node => {
+
+    const jabatan = node.childNodes[0].textContent.trim();
+
+    // cari semua pegawai dengan jabatan sama (tanpa filter ULP)
+    const matches = dataPegawai.filter(d =>
+      d["Nama Panjang Posisi"]?.trim() === jabatan
+    );
+
+    // hapus dulu info lama (biar tidak dobel)
+    node.querySelectorAll('.personnel-info').forEach(e => e.remove());
+
+    matches.forEach(match => {
+
+      let masa = parseInt(match["Masa Jabatan (Tahun)"]) || 0;
+
+      let kelasMJ = masa <= 2 ? masa :
+                    masa === 3 ? 3 :
+                    4;
+
+      node.innerHTML += `
+        <div class="personnel-info mj-${kelasMJ}">
+          ${match["Personnel Subarea"]}<br>
+          PN: ${match["Personnel Number"]}<br>
+          Masa Jabatan: ${masa} Tahun
+        </div>
+      `;
+    });
+
+  });
+
+}
+ 
+  });
+
+}
+function searchStruktur(){
+
+  const keyword = document.getElementById('searchJabatan').value.toLowerCase();
+  const nodes = document.querySelectorAll('.node');
+
+  nodes.forEach(node=>{
+    node.classList.remove('highlight');
+
+    if(keyword !== '' && node.innerText.toLowerCase().includes(keyword)){
+      node.classList.add('highlight');
+      node.scrollIntoView({behavior:'smooth', block:'center'});
+    }
+  });
+
+}
+function toggleULP(){
+  const menu = document.getElementById("ulpMenu");
+
+  if(menu.style.display === "none"){
+    menu.style.display = "block";
+  } else {
+    menu.style.display = "none";
+  }
+}
+function openStruktur(){
+  document.getElementById("ulpMenu").style.display = "block";
+  showStrukturJabatan("UNIT LAYANAN PELANGGAN");
+}
+
+/* ===== ZOOM FOKUS KURSOR ===== */
+
+const MIN_ZOOM = 0.4;
+const MAX_ZOOM = 2;
+const SPEED = 0.08;
+
+document.addEventListener("wheel", function(e){
+
+  const wrapper = e.target.closest(".zoom-wrapper");
+  if(!wrapper) return;
+
+  const canvas = wrapper.querySelector(".zoom-canvas");
+  if(!canvas) return;
+
+  e.preventDefault();
+
+  let scale = parseFloat(canvas.dataset.scale || 1);
+
+  const direction = e.deltaY > 0 ? -1 : 1;
+  scale += direction * SPEED;
+
+  scale = Math.min(Math.max(MIN_ZOOM, scale), MAX_ZOOM);
+
+  canvas.style.zoom = scale;   // 🔥 INI KUNCINYA
+  canvas.dataset.scale = scale;
+
+}, { passive:false });
+</script>
+
+</body>
+</html>
